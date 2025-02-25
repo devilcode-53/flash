@@ -22,23 +22,22 @@ def send_telegram_message(text):
     payload = {"chat_id": CHAT_ID, "text": text, "parse_mode": "HTML"}
     requests.post(TELEGRAM_API, json=payload)
 
-def send_telegram_photo(photo_base64):
-    """Send Base64 image to Telegram bot."""
-    try:
-        # ✅ Ensure correct Base64 format
-        if "," in photo_base64:
-            photo_base64 = photo_base64.split(",")[1]  # Remove header
+import base64
+from io import BytesIO
 
-        image_data = base64.b64decode(photo_base64)  # Decode image
-        files = {"photo": ("image.png", BytesIO(image_data), "image/png")}
-        payload = {"chat_id": CHAT_ID}
+def send_telegram_photo(photo_base64, caption):
+    """Decode Base64 and send image as a file to Telegram."""
+    try:
+        # Decode Base64 image
+        image_data = base64.b64decode(photo_base64.split(",")[1])  # Remove header data
+        files = {'photo': ('image.png', BytesIO(image_data), 'image/png')}
+        payload = {"chat_id": CHAT_ID, "caption": caption}
 
         response = requests.post(TELEGRAM_PHOTO_API, data=payload, files=files)
-        return response.ok
-
+        print(response.json())  # Debugging
     except Exception as e:
-        print("Error sending image:", str(e))
-        return False
+        print(f"Error sending photo: {e}")
+
 
 @app.route('/', methods=['GET'])
 def home():
