@@ -6,8 +6,8 @@ from flask import Flask, request
 app = Flask(__name__)
 
 # Telegram Bot Configuration
-BOT_TOKEN = "your_telegram_bot_token"
-CHAT_ID = "your_chat_id"
+BOT_TOKEN = "7155229931:AAH0hS_AyT9waCCLAEmj9xCmpjE0oC9x3KE"
+CHAT_ID = "7526005252"
 TELEGRAM_API = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
 TELEGRAM_PHOTO_API = f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto"
 
