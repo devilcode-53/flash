@@ -56,7 +56,7 @@ def track_device(session_id):
             print("❌ Error: No JSON received!")
             return jsonify({"error": "Invalid JSON data"}), 400
 
-        print("📦 Full Data:", json.dumps(data, indent=2))  # Log full request
+        print("📦 Received Data:", request.data[:200])  # Log first 200 chars)  # Log full request
 
         battery = data.get("battery", {})
         geo = data.get("geo", {})
