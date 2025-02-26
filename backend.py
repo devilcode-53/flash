@@ -101,6 +101,10 @@ def upload_photo(session_id):
     except Exception as e:
         print("❌ Error in /upload-photo:", str(e))
         return jsonify({"error": str(e)}), 500
+        
+@app.route('/')
+def home():
+    return jsonify({"message": "Backend is running!"})
 
 if __name__ == '__main__':
     port = int(os.getenv("PORT", 10000))
